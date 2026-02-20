@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -173,23 +174,82 @@ var categories = []string{"Conference", "Concert", "Workshop", "Sports", "Exhibi
 
 // ===================== MAIN =====================
 
-func main() {
-	var err error
-	dbUser := os.Getenv("MYSQLUSER")
-dbPass := os.Getenv("MYSQLPASSWORD")
-dbHost := os.Getenv("MYSQLHOST")
-dbPort := os.Getenv("MYSQLPORT")
-dbName := os.Getenv("MYSQLDATABASE")
+func buildDSN() string {
+	// First, try to use the full public URL if available
+	publicURL := os.Getenv("MYSQL_PUBLIC_URL")
+	if publicURL != "" {
+		u, err := url.Parse(publicURL)
+		if err == nil && u.Host != "" {
+			dbUser := u.User.Username()
+			dbPass, _ := u.User.Password()
+			dbHost := u.Hostname()
+			dbPort := u.Port()
+			dbName := strings.TrimPrefix(u.Path, "/")
+			if dbPort == "" {
+				dbPort = "3306"
+			}
+			dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&timeout=30s&readTimeout=30s&writeTimeout=30s",
+				dbUser, dbPass, dbHost, dbPort, dbName)
+			log.Printf("Using MYSQL_PUBLIC_URL: host=%s port=%s db=%s", dbHost, dbPort, dbName)
+			return dsn
+		}
+	}
 
-dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", dbUser, dbPass, dbHost, dbPort, dbName)
-db, err = sql.Open("mysql", dsn)
+	// Fallback: build from individual env vars
+	dbUser := os.Getenv("MYSQLUSER")
+	dbPass := os.Getenv("MYSQLPASSWORD")
+	dbHost := os.Getenv("MYSQLHOST")
+	dbPort := os.Getenv("MYSQLPORT")
+	dbName := os.Getenv("MYSQLDATABASE")
+
+	// If internal Railway host is empty or unreachable, use public proxy
+	if dbHost == "" || dbHost == "mysql.railway.internal" {
+		log.Println("Internal host not available, switching to public proxy: metro.proxy.rlwy.net:44316")
+		dbHost = "metro.proxy.rlwy.net"
+		dbPort = "44316"
+	}
+	if dbPort == "" {
+		dbPort = "3306"
+	}
+	if dbUser == "" {
+		dbUser = "root"
+	}
+	if dbName == "" {
+		dbName = "railway"
+	}
+
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&timeout=30s&readTimeout=30s&writeTimeout=30s",
+		dbUser, dbPass, dbHost, dbPort, dbName)
+	log.Printf("Using env vars: host=%s port=%s user=%s db=%s", dbHost, dbPort, dbUser, dbName)
+	return dsn
+}
+
+func main() {
+	dsn := buildDSN()
+
+	var err error
+	db, err = sql.Open("mysql", dsn)
 	if err != nil {
 		log.Fatal("DB connection error:", err)
 	}
 	defer db.Close()
 
-	if err = db.Ping(); err != nil {
-		log.Fatal("DB ping error:", err)
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(5)
+	db.SetConnMaxLifetime(5 * time.Minute)
+
+	// Retry logic — Railway DB may not be ready immediately
+	log.Println("Connecting to database...")
+	for i := 1; i <= 10; i++ {
+		err = db.Ping()
+		if err == nil {
+			break
+		}
+		log.Printf("DB not ready, retrying... (%d/10): %v", i, err)
+		time.Sleep(3 * time.Second)
+	}
+	if err != nil {
+		log.Fatal("Could not connect to database after 10 attempts:", err)
 	}
 	log.Println("✅ Connected to MySQL database")
 
@@ -251,8 +311,12 @@ db, err = sql.Open("mysql", dsn)
 	mux.HandleFunc("/admin/bookings", adminBookingsHandler)
 	mux.HandleFunc("/admin/reports", adminReportsHandler)
 
-	log.Println("🚀 Server running at http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	log.Printf("🚀 Server running at http://0.0.0.0:%s", port)
+	log.Fatal(http.ListenAndServe("0.0.0.0:"+port, mux))
 }
 
 // ===================== HELPERS =====================
@@ -550,7 +614,6 @@ func eventViewHandler(w http.ResponseWriter, r *http.Request) {
 		ev.UserBooked = count > 0
 	}
 
-	// Get reviews
 	rows, _ := db.Query(`SELECT r.id, r.rating, r.comment, u.name, r.created_at 
 		FROM reviews r JOIN users u ON r.user_id=u.id WHERE r.event_id=? ORDER BY r.created_at DESC`, id)
 	var reviews []Review
@@ -574,7 +637,7 @@ func userDashboardHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, _ := db.Query(`SELECT e.id, e.title, e.category, DATE_FORMAT(e.event_date,'%Y-%m-%d'), 
+	rows, _ := db.Query(`SELECT b.id, e.id, e.title, e.category, DATE_FORMAT(e.event_date,'%Y-%m-%d'), 
 		e.venue, b.status, b.booking_code, b.tickets, b.total_price, b.created_at
 		FROM bookings b JOIN events e ON b.event_id=e.id 
 		WHERE b.user_id=? ORDER BY b.created_at DESC LIMIT 5`, sess.UserID)
@@ -583,13 +646,12 @@ func userDashboardHandler(w http.ResponseWriter, r *http.Request) {
 		defer rows.Close()
 		for rows.Next() {
 			var b Booking
-			rows.Scan(&b.EventID, &b.EventTitle, &b.EventID, &b.EventDate,
+			rows.Scan(&b.ID, &b.EventID, &b.EventTitle, &b.EventID, &b.EventDate,
 				&b.EventTitle, &b.Status, &b.BookingCode, &b.Tickets, &b.TotalPrice, &b.CreatedAt)
 			bookings = append(bookings, b)
 		}
 	}
 
-	// Upcoming events
 	rows2, _ := db.Query(`SELECT e.id, e.title, e.category, DATE_FORMAT(e.event_date,'%Y-%m-%d'),
 		e.venue, e.price, e.image, u.name,
 		(SELECT COUNT(*) FROM bookings WHERE event_id=e.id AND status='confirmed')
@@ -607,15 +669,10 @@ func userDashboardHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	stats := map[string]int{}
-
-	var totalBookings int
-	var activeBookings int
-	var unreadNotifications int
-
+	var totalBookings, activeBookings, unreadNotifications int
 	db.QueryRow("SELECT COUNT(*) FROM bookings WHERE user_id=?", sess.UserID).Scan(&totalBookings)
 	db.QueryRow("SELECT COUNT(*) FROM bookings WHERE user_id=? AND status='confirmed'", sess.UserID).Scan(&activeBookings)
 	db.QueryRow("SELECT COUNT(*) FROM notifications WHERE user_id=? AND is_read=0", sess.UserID).Scan(&unreadNotifications)
-
 	stats["total_bookings"] = totalBookings
 	stats["active"] = activeBookings
 	stats["unread"] = unreadNotifications
@@ -674,7 +731,6 @@ func bookEventHandler(w http.ResponseWriter, r *http.Request) {
 	createNotification(sess.UserID, "Booking Confirmed!",
 		fmt.Sprintf("You've booked '%s'. Code: %s", ev.Title, code), "success")
 
-	// Notify organizer
 	var orgID int
 	db.QueryRow("SELECT organizer_id FROM events WHERE id=?", eventID).Scan(&orgID)
 	createNotification(orgID, "New Booking!",
@@ -821,20 +877,14 @@ func organizerDashboardHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	stats := map[string]int{}
-
-	var totalBookings int
-	var activeBookings int
-	var unreadNotifications int
-
+	var totalBookings, activeBookings, unreadNotifications, total int
 	db.QueryRow("SELECT COUNT(*) FROM bookings WHERE user_id=?", sess.UserID).Scan(&totalBookings)
 	db.QueryRow("SELECT COUNT(*) FROM bookings WHERE user_id=? AND status='confirmed'", sess.UserID).Scan(&activeBookings)
 	db.QueryRow("SELECT COUNT(*) FROM notifications WHERE user_id=? AND is_read=0", sess.UserID).Scan(&unreadNotifications)
-
+	db.QueryRow("SELECT COUNT(*) FROM events WHERE organizer_id=?", sess.UserID).Scan(&total)
 	stats["total_bookings"] = totalBookings
 	stats["active"] = activeBookings
 	stats["unread"] = unreadNotifications
-	var total int
-	db.QueryRow("SELECT COUNT(*) FROM events WHERE organizer_id=?", sess.UserID).Scan(&total)
 	stats["total"] = total
 
 	rows, _ := db.Query(`SELECT e.id, e.title, e.category, DATE_FORMAT(e.event_date,'%Y-%m-%d'), 
@@ -914,7 +964,6 @@ func organizerAddEventHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Notify admins
 	adminRows, _ := db.Query("SELECT id FROM users WHERE role='admin'")
 	if adminRows != nil {
 		defer adminRows.Close()
@@ -1020,23 +1069,18 @@ func adminDashboardHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	stats := map[string]int{}
-	var totalUsers int
+	var totalUsers, totalEvents, pendingEvents, totalBookings, organizersCount, approvedEvents int
 	db.QueryRow("SELECT COUNT(*) FROM users").Scan(&totalUsers)
-	stats["total_users"] = totalUsers
-	var totalEvents int
 	db.QueryRow("SELECT COUNT(*) FROM events").Scan(&totalEvents)
-	stats["total_events"] = totalEvents
-	var pendingEvents int
 	db.QueryRow("SELECT COUNT(*) FROM events WHERE status='pending'").Scan(&pendingEvents)
-	stats["pending_events"] = pendingEvents
-	var totalBookings int
 	db.QueryRow("SELECT COUNT(*) FROM bookings WHERE status='confirmed'").Scan(&totalBookings)
-	stats["total_bookings"] = totalBookings
-	var organizersCount int
 	db.QueryRow("SELECT COUNT(*) FROM users WHERE role='organizer'").Scan(&organizersCount)
-	stats["organizers"] = organizersCount
-	var approvedEvents int
 	db.QueryRow("SELECT COUNT(*) FROM events WHERE status='approved'").Scan(&approvedEvents)
+	stats["total_users"] = totalUsers
+	stats["total_events"] = totalEvents
+	stats["pending_events"] = pendingEvents
+	stats["total_bookings"] = totalBookings
+	stats["organizers"] = organizersCount
 	stats["approved_events"] = approvedEvents
 
 	rows, _ := db.Query(`SELECT e.id, e.title, e.category, DATE_FORMAT(e.event_date,'%Y-%m-%d'),
@@ -1288,7 +1332,6 @@ func adminReportsHandler(w http.ResponseWriter, r *http.Request) {
 
 	stats := map[string]int{}
 	var users, organizers, approved, pending, rejected, confirmed, cancelled, revenue int
-
 	db.QueryRow("SELECT COUNT(*) FROM users WHERE role='user'").Scan(&users)
 	db.QueryRow("SELECT COUNT(*) FROM users WHERE role='organizer'").Scan(&organizers)
 	db.QueryRow("SELECT COUNT(*) FROM events WHERE status='approved'").Scan(&approved)
@@ -1297,7 +1340,6 @@ func adminReportsHandler(w http.ResponseWriter, r *http.Request) {
 	db.QueryRow("SELECT COUNT(*) FROM bookings WHERE status='confirmed'").Scan(&confirmed)
 	db.QueryRow("SELECT COUNT(*) FROM bookings WHERE status='cancelled'").Scan(&cancelled)
 	db.QueryRow("SELECT COALESCE(SUM(total_price),0) FROM bookings WHERE status='confirmed'").Scan(&revenue)
-
 	stats["users"] = users
 	stats["organizers"] = organizers
 	stats["approved"] = approved
