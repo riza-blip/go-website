@@ -175,42 +175,38 @@ var categories = []string{"Conference", "Concert", "Workshop", "Sports", "Exhibi
 // ===================== MAIN =====================
 
 func buildDSN() string {
-	// First, try to use the full public URL if available
+	// Strategy 1: Parse MYSQL_PUBLIC_URL directly (most reliable)
 	publicURL := os.Getenv("MYSQL_PUBLIC_URL")
 	if publicURL != "" {
 		u, err := url.Parse(publicURL)
 		if err == nil && u.Host != "" {
 			dbUser := u.User.Username()
-			dbPass, _ := u.User.Password()
+			dbPass, hasPass := u.User.Password()
 			dbHost := u.Hostname()
 			dbPort := u.Port()
 			dbName := strings.TrimPrefix(u.Path, "/")
 			if dbPort == "" {
 				dbPort = "3306"
 			}
-			dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&timeout=30s&readTimeout=30s&writeTimeout=30s",
-				dbUser, dbPass, dbHost, dbPort, dbName)
-			log.Printf("Using MYSQL_PUBLIC_URL: host=%s port=%s db=%s", dbHost, dbPort, dbName)
-			return dsn
+			if hasPass && dbUser != "" && dbHost != "" {
+				dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&timeout=30s&readTimeout=30s&writeTimeout=30s",
+					dbUser, dbPass, dbHost, dbPort, dbName)
+				log.Printf("✅ Using MYSQL_PUBLIC_URL: host=%s port=%s user=%s db=%s", dbHost, dbPort, dbUser, dbName)
+				return dsn
+			}
 		}
+		log.Printf("⚠️  MYSQL_PUBLIC_URL parse failed or missing credentials, trying env vars...")
 	}
 
-	// Fallback: build from individual env vars
+	// Strategy 2: Use individual env vars with public proxy host
 	dbUser := os.Getenv("MYSQLUSER")
 	dbPass := os.Getenv("MYSQLPASSWORD")
-	dbHost := os.Getenv("MYSQLHOST")
-	dbPort := os.Getenv("MYSQLPORT")
 	dbName := os.Getenv("MYSQLDATABASE")
 
-	// If internal Railway host is empty or unreachable, use public proxy
-	if dbHost == "" || dbHost == "mysql.railway.internal" {
-		log.Println("Internal host not available, switching to public proxy: metro.proxy.rlwy.net:44316")
-		dbHost = "metro.proxy.rlwy.net"
-		dbPort = "44316"
-	}
-	if dbPort == "" {
-		dbPort = "3306"
-	}
+	// Always use the public proxy host/port directly — internal host won't work
+	dbHost := "metro.proxy.rlwy.net"
+	dbPort := "44316"
+
 	if dbUser == "" {
 		dbUser = "root"
 	}
@@ -218,10 +214,11 @@ func buildDSN() string {
 		dbName = "railway"
 	}
 
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&timeout=30s&readTimeout=30s&writeTimeout=30s",
+	log.Printf("✅ Using public proxy: host=%s port=%s user=%s db=%s passwordSet=%v",
+		dbHost, dbPort, dbUser, dbName, dbPass != "")
+
+	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&timeout=30s&readTimeout=30s&writeTimeout=30s",
 		dbUser, dbPass, dbHost, dbPort, dbName)
-	log.Printf("Using env vars: host=%s port=%s user=%s db=%s", dbHost, dbPort, dbUser, dbName)
-	return dsn
 }
 
 func main() {
