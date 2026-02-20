@@ -1,0 +1,165 @@
+{{define "index.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EventHub - Discover & Book Amazing Events</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--primary:#6366f1;--primary-dark:#4f46e5;}
+*{font-family:'Inter',sans-serif;}
+.navbar{background:rgba(15,23,42,.95);backdrop-filter:blur(10px);}
+.navbar-brand{font-weight:800;font-size:1.5rem;color:#fff!important;}
+.navbar-brand span{color:#818cf8;}
+.navbar .nav-link{color:rgba(255,255,255,.8)!important;}
+.navbar .nav-link:hover{color:#fff!important;}
+.hero{background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 50%,#0f172a 100%);padding:100px 0;position:relative;overflow:hidden;}
+.hero::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%236366f1' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");}
+.hero h1{font-size:3.5rem;font-weight:800;color:#fff;line-height:1.15;}
+.hero h1 span{background:linear-gradient(90deg,#818cf8,#c084fc);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+.hero p{color:rgba(255,255,255,.7);font-size:1.125rem;}
+.hero-search{background:rgba(255,255,255,.1);border-radius:50px;padding:.75rem 1rem;display:flex;gap:.5rem;max-width:600px;}
+.hero-search input{background:transparent;border:none;color:#fff;flex:1;outline:none;}
+.hero-search input::placeholder{color:rgba(255,255,255,.5);}
+.hero-search button{background:var(--primary);border:none;color:#fff;border-radius:50px;padding:.5rem 1.5rem;}
+.stat-pill{background:rgba(255,255,255,.1);border-radius:50px;padding:.5rem 1.5rem;color:#fff;display:inline-flex;align-items:center;gap:.5rem;}
+.event-card{border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;transition:all .2s;background:#fff;}
+.event-card:hover{transform:translateY(-4px);box-shadow:0 12px 28px rgba(0,0,0,.12);}
+.event-card img{height:200px;width:100%;object-fit:cover;}
+.event-card .no-img{height:200px;background:linear-gradient(135deg,#6366f1,#c084fc);display:flex;align-items:center;justify-content:center;font-size:3rem;color:#fff;}
+.section-title{font-size:2rem;font-weight:700;text-align:center;margin-bottom:.5rem;}
+.section-sub{text-align:center;color:#64748b;margin-bottom:3rem;}
+.feature-icon{width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#6366f1,#818cf8);display:flex;align-items:center;justify-content:center;font-size:1.75rem;color:#fff;margin:0 auto 1rem;}
+.footer{background:#0f172a;color:rgba(255,255,255,.7);padding:3rem 0;}
+.btn-primary{background:var(--primary);border-color:var(--primary);}
+.btn-primary:hover{background:var(--primary-dark);border-color:var(--primary-dark);}
+.badge-cat{background:#ede9fe;color:#6d28d9;font-size:.75rem;padding:.25rem .75rem;border-radius:50px;}
+</style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+  <div class="container">
+    <a class="navbar-brand" href="/"><i class="bi bi-calendar-event me-2"></i>Event<span>Hub</span></a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu"><span class="navbar-toggler-icon"></span></button>
+    <div class="collapse navbar-collapse" id="navMenu">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link" href="/events"><i class="bi bi-grid me-1"></i>Events</a></li>
+      </ul>
+      <div class="d-flex gap-2">
+        {{if .Session}}
+        <a href="/{{.Session.Role}}/dashboard" class="btn btn-outline-light btn-sm">Dashboard</a>
+        <a href="/logout" class="btn btn-primary btn-sm">Logout</a>
+        {{else}}
+        <a href="/login" class="btn btn-outline-light btn-sm">Login</a>
+        <a href="/register" class="btn btn-primary btn-sm">Sign Up Free</a>
+        {{end}}
+      </div>
+    </div>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="container position-relative">
+    <div class="row align-items-center">
+      <div class="col-lg-7">
+        <h1>Discover & Book <span>Amazing Events</span> Near You</h1>
+        <p class="my-4">EventHub connects organizers with attendees. Find concerts, workshops, conferences, and more. Create unforgettable experiences.</p>
+        <form action="/events" method="GET">
+          <div class="hero-search mb-4">
+            <i class="bi bi-search" style="color:rgba(255,255,255,.5);line-height:1.8;"></i>
+            <input type="text" name="search" placeholder="Search events, venues, or categories...">
+            <button type="submit">Search</button>
+          </div>
+        </form>
+        
+      </div>
+      <div class="col-lg-5 d-none d-lg-flex justify-content-center">
+        <div style="font-size:12rem;line-height:1;">🎪</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{{if .Events}}
+<section class="py-5 bg-light">
+  <div class="container">
+    <h2 class="section-title">⭐ Featured Events</h2>
+    <p class="section-sub">Hand-picked events you won't want to miss</p>
+    <div class="row g-4">
+      {{range .Events}}
+      <div class="col-md-6 col-lg-4">
+        <div class="event-card">
+          {{if .Image}}<img src="{{.Image}}" alt="{{.Title}}">{{else}}<div class="no-img"><i class="bi bi-calendar-event"></i></div>{{end}}
+          <div class="p-4">
+            <span class="badge-cat mb-2 d-inline-block">{{.Category}}</span>
+            <h5 class="fw-700 mb-1">{{.Title}}</h5>
+            <p class="text-muted small mb-2">{{truncate .Description 80}}</p>
+            <div class="d-flex align-items-center gap-3 text-muted small mb-3">
+              <span><i class="bi bi-calendar3 me-1"></i>{{formatDate .EventDate}}</span>
+              <span><i class="bi bi-geo-alt me-1"></i>{{.Venue}}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="fw-600 text-primary fs-5">{{formatPrice .Price}}</span>
+              <a href="/events/view?id={{.ID}}" class="btn btn-primary btn-sm">Book Now</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      {{end}}
+    </div>
+    <div class="text-center mt-4">
+      <a href="/events" class="btn btn-outline-primary btn-lg">View All Events <i class="bi bi-arrow-right"></i></a>
+    </div>
+  </div>
+</section>
+{{end}}
+
+<section class="py-5">
+  <div class="container">
+    <h2 class="section-title">How EventHub Works</h2>
+    <p class="section-sub">Simple, fast, and reliable</p>
+    <div class="row g-4 text-center">
+      <div class="col-md-4">
+        <div class="feature-icon mb-3"><i class="bi bi-search"></i></div>
+        <h5 class="fw-600">Discover Events</h5>
+        <p class="text-muted">Browse hundreds of events by category, date, or location. Find exactly what you're looking for.</p>
+      </div>
+      <div class="col-md-4">
+        <div class="feature-icon mb-3"><i class="bi bi-ticket-perforated"></i></div>
+        <h5 class="fw-600">Book Instantly</h5>
+        <p class="text-muted">Reserve your spot with just a few clicks. Get instant confirmation with a unique booking code.</p>
+      </div>
+      <div class="col-md-4">
+        <div class="feature-icon mb-3"><i class="bi bi-emoji-smile"></i></div>
+        <h5 class="fw-600">Enjoy the Event</h5>
+        <p class="text-muted">Attend amazing events, meet new people, and create memories that last a lifetime.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="py-5" style="background:linear-gradient(135deg,#6366f1,#4f46e5);">
+  <div class="container text-center text-white">
+    <h2 class="fw-700 mb-3">Ready to Get Started?</h2>
+    <p class="mb-4 opacity-75">Join thousands of event-goers and organizers on EventHub</p>
+    <div class="d-flex gap-3 justify-content-center flex-wrap">
+      <a href="/register" class="btn btn-light btn-lg fw-600">Create Free Account</a>
+      <a href="/events" class="btn btn-outline-light btn-lg">Browse Events</a>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="container text-center">
+    <div class="mb-3" style="font-size:1.5rem;font-weight:700;color:#fff;"><i class="bi bi-calendar-event me-2" style="color:#818cf8"></i>EventHub</div>
+    <p class="mb-0">&copy; 2026 EventHub. All rights reserved.</p>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+{{end}}

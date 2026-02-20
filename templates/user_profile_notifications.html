@@ -1,0 +1,165 @@
+{{define "user_profile.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Profile - EventHub</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--primary:#6366f1;}*{font-family:'Inter',sans-serif;}body{background:#f8fafc;}
+.sidebar-wrapper{width:260px;background:#0f172a;position:fixed;top:0;left:0;height:100vh;z-index:100;overflow-y:auto;}
+.brand{padding:1.5rem;font-size:1.2rem;font-weight:800;color:#fff;border-bottom:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:.75rem;}
+.brand span{color:#818cf8;}
+.nav-s{padding:.75rem 1.5rem .25rem;color:rgba(255,255,255,.35);font-size:.65rem;text-transform:uppercase;letter-spacing:.12em;}
+.nav-link{color:rgba(255,255,255,.65);padding:.65rem 1.5rem;display:flex;align-items:center;gap:.75rem;font-size:.875rem;transition:all .2s;border-left:3px solid transparent;}
+.nav-link:hover,.nav-link.active{background:rgba(99,102,241,.2);color:#fff;border-left-color:var(--primary);}
+.nav-link i{width:18px;text-align:center;}
+.main-content{margin-left:260px;padding:0;}
+.topbar{background:#fff;border-bottom:1px solid #e2e8f0;padding:1rem 1.5rem;position:sticky;top:0;z-index:50;}
+.page-body{padding:1.5rem;}
+.profile-card{background:#fff;border-radius:16px;border:1px solid #e2e8f0;overflow:hidden;max-width:600px;}
+.profile-header{background:linear-gradient(135deg,#6366f1,#818cf8);padding:2.5rem;text-align:center;color:#fff;}
+.avatar-circle{width:90px;height:90px;border-radius:50%;border:4px solid rgba(255,255,255,.4);margin:0 auto 1rem;display:flex;align-items:center;justify-content:center;font-size:2.5rem;font-weight:700;background:rgba(255,255,255,.2);}
+.avatar-img{width:90px;height:90px;border-radius:50%;border:4px solid rgba(255,255,255,.4);object-fit:cover;margin:0 auto 1rem;display:block;}
+.form-control,.form-select{border-radius:8px;border:1.5px solid #e2e8f0;}
+.form-control:focus,.form-select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(99,102,241,.15);}
+.btn-primary{background:var(--primary);border-color:var(--primary);}
+.form-label{font-weight:500;font-size:.875rem;}
+.role-badge{background:rgba(255,255,255,.2);border-radius:50px;padding:.3rem 1rem;font-size:.8rem;}
+</style>
+</head>
+<body>
+<div class="sidebar-wrapper">
+  <div class="brand"><i class="bi bi-calendar-event" style="color:#818cf8"></i>Event<span>Hub</span></div>
+  <div class="nav-s">Main</div>
+  <a href="/{{.Session.Role}}/dashboard" class="nav-link"><i class="bi bi-grid-1x2-fill"></i>Dashboard</a>
+  <div class="nav-s">Account</div>
+  <a href="/user/notifications" class="nav-link"><i class="bi bi-bell"></i>Notifications</a>
+  <a href="/user/profile" class="nav-link active"><i class="bi bi-person-circle"></i>My Profile</a>
+  <a href="/logout" class="nav-link"><i class="bi bi-box-arrow-right"></i>Logout</a>
+</div>
+<div class="main-content">
+  <div class="topbar">
+    <h5 class="mb-0 fw-700">My Profile</h5>
+  </div>
+  <div class="page-body">
+    {{if (eq .Message "1")}}<div class="alert alert-success mb-3 max-width-600"><i class="bi bi-check-circle me-2"></i>Profile updated successfully!</div>{{end}}
+    <div class="profile-card">
+      <div class="profile-header">
+        {{if .User.Avatar}}<img src="{{.User.Avatar}}" class="avatar-img">{{else}}<div class="avatar-circle">{{slice .User.Name 0 1}}</div>{{end}}
+        <h5 class="fw-700 mb-1">{{.User.Name}}</h5>
+        <div class="role-badge d-inline-block">{{.User.Role}}</div>
+      </div>
+      <div class="p-4">
+        <form method="POST" action="/user/profile" enctype="multipart/form-data">
+          <div class="mb-3">
+            <label class="form-label">Full Name</label>
+            <input type="text" class="form-control" name="name" value="{{.User.Name}}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Email Address</label>
+            <input type="email" class="form-control" value="{{.User.Email}}" disabled>
+            <div class="form-text">Email cannot be changed</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Phone Number</label>
+            <input type="tel" class="form-control" name="phone" value="{{.User.Phone}}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Profile Picture</label>
+            <input type="file" class="form-control" name="avatar" accept="image/*">
+          </div>
+          <div class="mb-4">
+            <label class="form-label">New Password <small class="text-muted">(leave blank to keep current)</small></label>
+            <input type="password" class="form-control" name="password" placeholder="••••••••" minlength="6">
+          </div>
+          <button type="submit" class="btn btn-primary px-4"><i class="bi bi-save me-1"></i>Save Changes</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+{{end}}
+
+{{define "notifications.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notifications - EventHub</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--primary:#6366f1;}*{font-family:'Inter',sans-serif;}body{background:#f8fafc;}
+.sidebar-wrapper{width:260px;background:#0f172a;position:fixed;top:0;left:0;height:100vh;z-index:100;overflow-y:auto;}
+.brand{padding:1.5rem;font-size:1.2rem;font-weight:800;color:#fff;border-bottom:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:.75rem;}
+.brand span{color:#818cf8;}
+.nav-s{padding:.75rem 1.5rem .25rem;color:rgba(255,255,255,.35);font-size:.65rem;text-transform:uppercase;letter-spacing:.12em;}
+.nav-link{color:rgba(255,255,255,.65);padding:.65rem 1.5rem;display:flex;align-items:center;gap:.75rem;font-size:.875rem;transition:all .2s;border-left:3px solid transparent;}
+.nav-link:hover,.nav-link.active{background:rgba(99,102,241,.2);color:#fff;border-left-color:var(--primary);}
+.nav-link i{width:18px;text-align:center;}
+.main-content{margin-left:260px;padding:0;}
+.topbar{background:#fff;border-bottom:1px solid #e2e8f0;padding:1rem 1.5rem;position:sticky;top:0;z-index:50;}
+.page-body{padding:1.5rem;}
+.notif-item{background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:1rem 1.25rem;margin-bottom:.75rem;display:flex;gap:1rem;align-items:flex-start;transition:all .2s;}
+.notif-item:hover{box-shadow:0 2px 8px rgba(0,0,0,.06);}
+.notif-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+.notif-info{background:#e0f2fe;color:#0369a1;}
+.notif-success{background:#d1fae5;color:#065f46;}
+.notif-warning{background:#fef3c7;color:#92400e;}
+.notif-error{background:#fee2e2;color:#991b1b;}
+</style>
+</head>
+<body>
+<div class="sidebar-wrapper">
+  <div class="brand"><i class="bi bi-calendar-event" style="color:#818cf8"></i>Event<span>Hub</span></div>
+  <div class="nav-s">Main</div>
+  <a href="/{{.Session.Role}}/dashboard" class="nav-link"><i class="bi bi-grid-1x2-fill"></i>Dashboard</a>
+  <div class="nav-s">Account</div>
+  <a href="/user/notifications" class="nav-link active"><i class="bi bi-bell"></i>Notifications</a>
+  <a href="/user/profile" class="nav-link"><i class="bi bi-person-circle"></i>My Profile</a>
+  <a href="/logout" class="nav-link"><i class="bi bi-box-arrow-right"></i>Logout</a>
+</div>
+<div class="main-content">
+  <div class="topbar">
+    <div>
+      <h5 class="mb-0 fw-700">Notifications</h5>
+      <p class="mb-0 text-muted small">{{len .Notifications}} notifications</p>
+    </div>
+  </div>
+  <div class="page-body" style="max-width:700px;">
+    {{if .Notifications}}
+    {{range .Notifications}}
+    <div class="notif-item">
+      <div class="notif-icon notif-{{.Type}}">
+        {{if eq .Type "success"}}<i class="bi bi-check-circle-fill"></i>
+        {{else if eq .Type "error"}}<i class="bi bi-x-circle-fill"></i>
+        {{else if eq .Type "warning"}}<i class="bi bi-exclamation-circle-fill"></i>
+        {{else}}<i class="bi bi-info-circle-fill"></i>{{end}}
+      </div>
+      <div class="flex-grow-1">
+        <div class="fw-600 small mb-1">{{.Title}}</div>
+        <div class="text-muted small mb-1">{{.Message}}</div>
+        <div style="font-size:.7rem;color:#94a3b8;">{{.CreatedAt.Format "Jan 02, 2006 3:04 PM"}}</div>
+      </div>
+    </div>
+    {{end}}
+    {{else}}
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-bell-slash fs-1 d-block mb-3"></i>
+      <h5>No notifications</h5>
+      <p>You're all caught up!</p>
+    </div>
+    {{end}}
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+{{end}}

@@ -1,0 +1,102 @@
+{{define "admin_user_form.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{if .User}}Edit{{else}}Add{{end}} User - EventHub Admin</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--primary:#6366f1;}*{font-family:'Inter',sans-serif;}body{background:#f8fafc;}
+.sidebar{width:260px;background:#0f172a;position:fixed;top:0;left:0;height:100vh;z-index:100;overflow-y:auto;}
+.brand{padding:1.5rem;font-size:1.2rem;font-weight:800;color:#fff;border-bottom:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:.75rem;}
+.brand span{color:#818cf8;}
+.nav-section{padding:.75rem 1.5rem .25rem;color:rgba(255,255,255,.35);font-size:.65rem;text-transform:uppercase;letter-spacing:.12em;}
+.nav-link{color:rgba(255,255,255,.65);padding:.65rem 1.5rem;display:flex;align-items:center;gap:.75rem;font-size:.875rem;transition:all .2s;border-left:3px solid transparent;}
+.nav-link:hover,.nav-link.active{background:rgba(99,102,241,.2);color:#fff;border-left-color:var(--primary);}
+.nav-link i{width:18px;text-align:center;}
+.main-content{margin-left:260px;padding:0;}
+.topbar{background:#fff;border-bottom:1px solid #e2e8f0;padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.page-body{padding:1.5rem;}
+.card{border:1px solid #e2e8f0;border-radius:14px;box-shadow:none;max-width:600px;}
+.form-control,.form-select{border-radius:8px;border:1.5px solid #e2e8f0;}
+.form-control:focus,.form-select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(99,102,241,.15);}
+.btn-primary{background:var(--primary);border-color:var(--primary);}
+.form-label{font-weight:500;font-size:.875rem;}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="brand"><i class="bi bi-calendar-event" style="color:#818cf8"></i>Event<span>Hub</span></div>
+  <div class="nav-section">Main</div>
+  <a href="/admin/dashboard" class="nav-link"><i class="bi bi-grid-1x2-fill"></i>Dashboard</a>
+  <div class="nav-section">Management</div>
+  <a href="/admin/events?status=pending" class="nav-link"><i class="bi bi-clock-history"></i>Pending Events</a>
+  <a href="/admin/events" class="nav-link"><i class="bi bi-calendar-event"></i>All Events</a>
+  <a href="/admin/users" class="nav-link active"><i class="bi bi-people"></i>Users</a>
+  <a href="/admin/bookings" class="nav-link"><i class="bi bi-ticket-perforated"></i>Bookings</a>
+  <a href="/admin/reports" class="nav-link"><i class="bi bi-bar-chart"></i>Reports</a>
+  <div class="nav-section">Account</div>
+  <a href="/user/profile" class="nav-link"><i class="bi bi-person-circle"></i>Profile</a>
+  <a href="/logout" class="nav-link"><i class="bi bi-box-arrow-right"></i>Logout</a>
+</div>
+<div class="main-content">
+  <div class="topbar">
+    <div>
+      <h5 class="mb-0 fw-700">{{if .User}}Edit User{{else}}Add New User{{end}}</h5>
+      <p class="mb-0 text-muted small"><a href="/admin/users" class="text-muted">Users</a> / {{if .User}}Edit{{else}}Add{{end}}</p>
+    </div>
+  </div>
+  <div class="page-body">
+    {{if .Error}}<div class="alert alert-danger mb-3"><i class="bi bi-exclamation-circle me-2"></i>{{.Error}}</div>{{end}}
+    <div class="card">
+      <div class="card-body p-4">
+        <form method="POST" action="{{if .User}}/admin/users/edit?id={{.User.ID}}{{else}}/admin/users/add{{end}}">
+          <div class="mb-3">
+            <label class="form-label">Full Name <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="name" value="{{if .User}}{{.User.Name}}{{end}}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Email Address <span class="text-danger">*</span></label>
+            <input type="email" class="form-control" name="email" value="{{if .User}}{{.User.Email}}{{end}}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Phone Number</label>
+            <input type="tel" class="form-control" name="phone" value="{{if .User}}{{.User.Phone}}{{end}}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Role <span class="text-danger">*</span></label>
+            <select class="form-select" name="role" required>
+              <option value="user" {{if .User}}{{if eq .User.Role "user"}}selected{{end}}{{end}}>User</option>
+              <option value="organizer" {{if .User}}{{if eq .User.Role "organizer"}}selected{{end}}{{end}}>Organizer</option>
+              <option value="admin" {{if .User}}{{if eq .User.Role "admin"}}selected{{end}}{{end}}>Admin</option>
+            </select>
+          </div>
+          {{if .User}}
+          <div class="mb-3">
+            <label class="form-label">Status</label>
+            <select class="form-select" name="status">
+              <option value="active" {{if eq .User.Status "active"}}selected{{end}}>Active</option>
+              <option value="inactive" {{if eq .User.Status "inactive"}}selected{{end}}>Inactive</option>
+              <option value="banned" {{if eq .User.Status "banned"}}selected{{end}}>Banned</option>
+            </select>
+          </div>
+          {{end}}
+          <div class="mb-4">
+            <label class="form-label">{{if .User}}New Password <small class="text-muted">(leave blank to keep current)</small>{{else}}Password <span class="text-danger">*</span>{{end}}</label>
+            <input type="password" class="form-control" name="password" {{if not .User}}required{{end}} minlength="6" placeholder="••••••••">
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary px-4"><i class="bi bi-save me-1"></i>{{if .User}}Save Changes{{else}}Create User{{end}}</button>
+            <a href="/admin/users" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+{{end}}

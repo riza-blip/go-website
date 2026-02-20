@@ -1,0 +1,151 @@
+{{define "admin_reports.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reports - EventHub Admin</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{--primary:#6366f1;}*{font-family:'Inter',sans-serif;}body{background:#f8fafc;}
+.sidebar{width:260px;background:#0f172a;position:fixed;top:0;left:0;height:100vh;z-index:100;overflow-y:auto;}
+.brand{padding:1.5rem;font-size:1.2rem;font-weight:800;color:#fff;border-bottom:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:.75rem;}
+.brand span{color:#818cf8;}
+.nav-section{padding:.75rem 1.5rem .25rem;color:rgba(255,255,255,.35);font-size:.65rem;text-transform:uppercase;letter-spacing:.12em;}
+.nav-link{color:rgba(255,255,255,.65);padding:.65rem 1.5rem;display:flex;align-items:center;gap:.75rem;font-size:.875rem;transition:all .2s;border-left:3px solid transparent;}
+.nav-link:hover,.nav-link.active{background:rgba(99,102,241,.2);color:#fff;border-left-color:var(--primary);}
+.nav-link i{width:18px;text-align:center;}
+.main-content{margin-left:260px;padding:0;}
+.topbar{background:#fff;border-bottom:1px solid #e2e8f0;padding:1rem 1.5rem;position:sticky;top:0;z-index:50;}
+.page-body{padding:1.5rem;}
+.card{border:1px solid #e2e8f0;border-radius:14px;box-shadow:none;}
+.card-header{background:#fff;border-bottom:1px solid #f1f5f9;padding:1rem 1.25rem;font-weight:600;}
+.stat-card{background:#fff;border-radius:14px;padding:1.5rem;border:1px solid #e2e8f0;text-align:center;}
+.stat-value{font-size:2.5rem;font-weight:800;color:#0f172a;}
+.stat-label{color:#64748b;font-size:.85rem;margin-top:.25rem;}
+.progress{height:8px;border-radius:4px;}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="brand"><i class="bi bi-calendar-event" style="color:#818cf8"></i>Event<span>Hub</span></div>
+  <div class="nav-section">Main</div>
+  <a href="/admin/dashboard" class="nav-link"><i class="bi bi-grid-1x2-fill"></i>Dashboard</a>
+  <div class="nav-section">Management</div>
+  <a href="/admin/events?status=pending" class="nav-link"><i class="bi bi-clock-history"></i>Pending Events</a>
+  <a href="/admin/events" class="nav-link"><i class="bi bi-calendar-event"></i>All Events</a>
+  <a href="/admin/users" class="nav-link"><i class="bi bi-people"></i>Users</a>
+  <a href="/admin/bookings" class="nav-link"><i class="bi bi-ticket-perforated"></i>Bookings</a>
+  <a href="/admin/reports" class="nav-link active"><i class="bi bi-bar-chart"></i>Reports</a>
+  <div class="nav-section">Account</div>
+  <a href="/user/profile" class="nav-link"><i class="bi bi-person-circle"></i>Profile</a>
+  <a href="/logout" class="nav-link"><i class="bi bi-box-arrow-right"></i>Logout</a>
+</div>
+<div class="main-content">
+  <div class="topbar">
+    <h5 class="mb-0 fw-700"><i class="bi bi-bar-chart me-2 text-primary"></i>Analytics & Reports</h5>
+  </div>
+  <div class="page-body">
+    <!-- Key Metrics -->
+    <div class="row g-3 mb-4">
+      <div class="col-sm-6 col-lg-3">
+        <div class="stat-card">
+          <div style="font-size:2.5rem;margin-bottom:.5rem;">👥</div>
+          <div class="stat-value">{{.Stats.users}}</div>
+          <div class="stat-label">Registered Users</div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-lg-3">
+        <div class="stat-card">
+          <div style="font-size:2.5rem;margin-bottom:.5rem;">🎪</div>
+          <div class="stat-value">{{.Stats.organizers}}</div>
+          <div class="stat-label">Event Organizers</div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-lg-3">
+        <div class="stat-card">
+          <div style="font-size:2.5rem;margin-bottom:.5rem;">✅</div>
+          <div class="stat-value">{{.Stats.confirmed}}</div>
+          <div class="stat-label">Confirmed Bookings</div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-lg-3">
+        <div class="stat-card">
+          <div style="font-size:2.5rem;margin-bottom:.5rem;">💰</div>
+          <div class="stat-value" style="font-size:1.75rem;">₱{{.Stats.revenue}}</div>
+          <div class="stat-label">Total Revenue</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <!-- Event Status Chart -->
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header"><i class="bi bi-pie-chart me-2"></i>Events by Status</div>
+          <div class="card-body" style="height:250px;display:flex;align-items:center;justify-content:center;">
+            <canvas id="eventsChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Booking Status Chart -->
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header"><i class="bi bi-bar-chart me-2"></i>Bookings Overview</div>
+          <div class="card-body" style="height:250px;display:flex;align-items:center;justify-content:center;">
+            <canvas id="bookingsChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Event Metrics -->
+      <div class="col-md-12">
+        <div class="card">
+          <div class="card-header"><i class="bi bi-activity me-2"></i>Platform Metrics</div>
+          <div class="card-body">
+            <div class="row g-4">
+              <div class="col-md-4">
+                <div class="d-flex justify-content-between mb-1"><span class="small fw-500">Approved Events</span><span class="small">{{.Stats.approved}}</span></div>
+                <div class="progress"><div class="progress-bar bg-success" style="width:{{if gt (add .Stats.approved .Stats.pending .Stats.rejected) 0}}{{mul .Stats.approved 100}}%{{else}}0%{{end}}"></div></div>
+              </div>
+              <div class="col-md-4">
+                <div class="d-flex justify-content-between mb-1"><span class="small fw-500">Pending Events</span><span class="small">{{.Stats.pending}}</span></div>
+                <div class="progress"><div class="progress-bar bg-warning" style="width:40%"></div></div>
+              </div>
+              <div class="col-md-4">
+                <div class="d-flex justify-content-between mb-1"><span class="small fw-500">Rejected Events</span><span class="small">{{.Stats.rejected}}</span></div>
+                <div class="progress"><div class="progress-bar bg-danger" style="width:20%"></div></div>
+              </div>
+              <div class="col-md-4">
+                <div class="d-flex justify-content-between mb-1"><span class="small fw-500">Confirmed Bookings</span><span class="small">{{.Stats.confirmed}}</span></div>
+                <div class="progress"><div class="progress-bar bg-primary" style="width:75%"></div></div>
+              </div>
+              <div class="col-md-4">
+                <div class="d-flex justify-content-between mb-1"><span class="small fw-500">Cancelled Bookings</span><span class="small">{{.Stats.cancelled}}</span></div>
+                <div class="progress"><div class="progress-bar bg-secondary" style="width:25%"></div></div>
+              </div>
+              <div class="col-md-4">
+                <div class="d-flex justify-content-between mb-1"><span class="small fw-500">Total Revenue</span><span class="small">₱{{.Stats.revenue}}</span></div>
+                <div class="progress"><div class="progress-bar" style="width:60%;background:#6366f1"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const ec = document.getElementById('eventsChart').getContext('2d');
+new Chart(ec,{type:'doughnut',data:{labels:['Approved','Pending','Rejected'],datasets:[{data:[{{.Stats.approved}},{{.Stats.pending}},{{.Stats.rejected}}],backgroundColor:['#22c55e','#f59e0b','#ef4444'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}});
+
+const bc = document.getElementById('bookingsChart').getContext('2d');
+new Chart(bc,{type:'bar',data:{labels:['Confirmed','Cancelled'],datasets:[{label:'Bookings',data:[{{.Stats.confirmed}},{{.Stats.cancelled}}],backgroundColor:['#6366f1','#94a3b8'],borderRadius:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
+</script>
+</body>
+</html>
+{{end}}

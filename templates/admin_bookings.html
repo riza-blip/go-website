@@ -1,0 +1,98 @@
+{{define "admin_bookings.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>All Bookings - EventHub Admin</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--primary:#6366f1;}*{font-family:'Inter',sans-serif;}body{background:#f8fafc;}
+.sidebar{width:260px;background:#0f172a;position:fixed;top:0;left:0;height:100vh;z-index:100;overflow-y:auto;}
+.brand{padding:1.5rem;font-size:1.2rem;font-weight:800;color:#fff;border-bottom:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:.75rem;}
+.brand span{color:#818cf8;}
+.nav-section{padding:.75rem 1.5rem .25rem;color:rgba(255,255,255,.35);font-size:.65rem;text-transform:uppercase;letter-spacing:.12em;}
+.nav-link{color:rgba(255,255,255,.65);padding:.65rem 1.5rem;display:flex;align-items:center;gap:.75rem;font-size:.875rem;transition:all .2s;border-left:3px solid transparent;}
+.nav-link:hover,.nav-link.active{background:rgba(99,102,241,.2);color:#fff;border-left-color:var(--primary);}
+.nav-link i{width:18px;text-align:center;}
+.main-content{margin-left:260px;padding:0;}
+.topbar{background:#fff;border-bottom:1px solid #e2e8f0;padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.page-body{padding:1.5rem;}
+.card{border:1px solid #e2e8f0;border-radius:14px;box-shadow:none;}
+.table th{font-size:.78rem;font-weight:600;color:#374151;text-transform:uppercase;letter-spacing:.03em;}
+.table td{font-size:.85rem;vertical-align:middle;}
+.badge{font-size:.7rem;padding:.3rem .65rem;border-radius:6px;}
+.bg-confirmed{background:#d1fae5!important;color:#065f46!important;}
+.bg-cancelled{background:#fee2e2!important;color:#991b1b!important;}
+.bg-pending{background:#fef3c7!important;color:#92400e!important;}
+.booking-code{font-family:monospace;background:#f8fafc;border:1px solid #e2e8f0;border-radius:4px;padding:.1rem .4rem;font-size:.8rem;}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="brand"><i class="bi bi-calendar-event" style="color:#818cf8"></i>Event<span>Hub</span></div>
+  <div class="nav-section">Main</div>
+  <a href="/admin/dashboard" class="nav-link"><i class="bi bi-grid-1x2-fill"></i>Dashboard</a>
+  <div class="nav-section">Management</div>
+  <a href="/admin/events?status=pending" class="nav-link"><i class="bi bi-clock-history"></i>Pending Events</a>
+  <a href="/admin/events" class="nav-link"><i class="bi bi-calendar-event"></i>All Events</a>
+  <a href="/admin/users" class="nav-link"><i class="bi bi-people"></i>Users</a>
+  <a href="/admin/bookings" class="nav-link active"><i class="bi bi-ticket-perforated"></i>Bookings</a>
+  <a href="/admin/reports" class="nav-link"><i class="bi bi-bar-chart"></i>Reports</a>
+  <div class="nav-section">Account</div>
+  <a href="/user/profile" class="nav-link"><i class="bi bi-person-circle"></i>Profile</a>
+  <a href="/logout" class="nav-link"><i class="bi bi-box-arrow-right"></i>Logout</a>
+</div>
+<div class="main-content">
+  <div class="topbar">
+    <div>
+      <h5 class="mb-0 fw-700">All Bookings</h5>
+      <p class="mb-0 text-muted small">Monitor all event bookings</p>
+    </div>
+    <span class="badge bg-primary fs-6">{{len .Bookings}} Total</span>
+  </div>
+  <div class="page-body">
+    <div class="card">
+      <div class="card-body p-0">
+        {{if .Bookings}}
+        <div class="table-responsive">
+          <table class="table mb-0">
+            <thead class="table-light">
+              <tr><th>#</th><th>Booking Code</th><th>Event</th><th>Attendee</th><th>Tickets</th><th>Total</th><th>Status</th><th>Booked On</th></tr>
+            </thead>
+            <tbody>
+              {{range $i, $b := .Bookings}}
+              <tr>
+                <td class="text-muted">{{add $i 1}}</td>
+                <td><span class="booking-code">{{$b.BookingCode}}</span></td>
+                <td>
+                  <div class="fw-500">{{truncate $b.EventTitle 30}}</div>
+                  <small class="text-muted">{{formatDate $b.EventDate}}</small>
+                </td>
+                <td>
+                  <div class="fw-500">{{$b.UserName}}</div>
+                  <small class="text-muted">{{$b.UserEmail}}</small>
+                </td>
+                <td class="fw-600">{{$b.Tickets}}</td>
+                <td class="fw-600 text-success">₱{{printf "%.2f" $b.TotalPrice}}</td>
+                <td><span class="badge bg-{{$b.Status}}">{{$b.Status}}</span></td>
+                <td class="text-muted small">{{$b.CreatedAt.Format "Jan 02, 2006"}}</td>
+              </tr>
+              {{end}}
+            </tbody>
+          </table>
+        </div>
+        {{else}}
+        <div class="text-center py-5 text-muted">
+          <i class="bi bi-ticket-perforated fs-1 d-block mb-2"></i>No bookings yet
+        </div>
+        {{end}}
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+{{end}}

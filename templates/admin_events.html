@@ -1,0 +1,173 @@
+{{define "admin_events.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manage Events - EventHub Admin</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--primary:#6366f1;}*{font-family:'Inter',sans-serif;}body{background:#f8fafc;}
+.sidebar{width:260px;background:#0f172a;position:fixed;top:0;left:0;height:100vh;z-index:100;overflow-y:auto;}
+.brand{padding:1.5rem;font-size:1.2rem;font-weight:800;color:#fff;border-bottom:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:.75rem;}
+.brand span{color:#818cf8;}
+.nav-section{padding:.75rem 1.5rem .25rem;color:rgba(255,255,255,.35);font-size:.65rem;text-transform:uppercase;letter-spacing:.12em;font-weight:600;}
+.nav-link{color:rgba(255,255,255,.65);padding:.65rem 1.5rem;display:flex;align-items:center;gap:.75rem;font-size:.875rem;transition:all .2s;border-left:3px solid transparent;}
+.nav-link:hover,.nav-link.active{background:rgba(99,102,241,.2);color:#fff;border-left-color:var(--primary);}
+.nav-link i{width:18px;text-align:center;}
+.main-content{margin-left:260px;padding:0;}
+.topbar{background:#fff;border-bottom:1px solid #e2e8f0;padding:1rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
+.page-body{padding:1.5rem;}
+.card{border:1px solid #e2e8f0;border-radius:14px;box-shadow:none;}
+.card-header{background:#fff;border-bottom:1px solid #f1f5f9;padding:1rem 1.25rem;}
+.table th{font-size:.78rem;font-weight:600;color:#374151;text-transform:uppercase;letter-spacing:.03em;}
+.table td{font-size:.85rem;vertical-align:middle;}
+.badge{font-size:.7rem;padding:.3rem .65rem;border-radius:6px;}
+.bg-pending{background:#fef3c7!important;color:#92400e!important;}
+.bg-approved{background:#d1fae5!important;color:#065f46!important;}
+.bg-rejected{background:#fee2e2!important;color:#991b1b!important;}
+.bg-cancelled{background:#f1f5f9!important;color:#475569!important;}
+.filter-btn{border-radius:50px;font-size:.8rem;padding:.3rem .9rem;}
+.filter-btn.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+.btn-primary{background:var(--primary);border-color:var(--primary);}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:.8rem;}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="brand"><i class="bi bi-calendar-event" style="color:#818cf8"></i>Event<span>Hub</span></div>
+  <div class="nav-section">Main</div>
+  <a href="/admin/dashboard" class="nav-link"><i class="bi bi-grid-1x2-fill"></i>Dashboard</a>
+  <div class="nav-section">Management</div>
+  <a href="/admin/events?status=pending" class="nav-link"><i class="bi bi-clock-history"></i>Pending Events</a>
+  <a href="/admin/events" class="nav-link active"><i class="bi bi-calendar-event"></i>All Events</a>
+  <a href="/admin/users" class="nav-link"><i class="bi bi-people"></i>Users</a>
+  <a href="/admin/bookings" class="nav-link"><i class="bi bi-ticket-perforated"></i>Bookings</a>
+  <a href="/admin/reports" class="nav-link"><i class="bi bi-bar-chart"></i>Reports</a>
+  <div class="nav-section">Account</div>
+  <a href="/user/profile" class="nav-link"><i class="bi bi-person-circle"></i>Profile</a>
+  <a href="/logout" class="nav-link"><i class="bi bi-box-arrow-right"></i>Logout</a>
+</div>
+
+<div class="main-content">
+  <div class="topbar">
+    <div>
+      <h5 class="mb-0 fw-700">Event Management</h5>
+      <p class="mb-0 text-muted small">Review, approve, and manage all events</p>
+    </div>
+    <div class="avatar">{{slice .Session.Name 0 1}}</div>
+  </div>
+
+  <div class="page-body">
+    <div class="card">
+      <div class="card-header">
+        <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between">
+          <div class="d-flex gap-2 flex-wrap">
+            <a href="/admin/events" class="btn btn-outline-secondary filter-btn {{if eq "" ""}}active{{end}}">All</a>
+            <a href="/admin/events?status=pending" class="btn btn-outline-secondary filter-btn">Pending</a>
+            <a href="/admin/events?status=approved" class="btn btn-outline-secondary filter-btn">Approved</a>
+            <a href="/admin/events?status=rejected" class="btn btn-outline-secondary filter-btn">Rejected</a>
+            <a href="/admin/events?status=cancelled" class="btn btn-outline-secondary filter-btn">Cancelled</a>
+          </div>
+          <span class="text-muted small">{{len .Events}} events</span>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        {{if .Events}}
+        <div class="table-responsive">
+          <table class="table mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>#</th>
+                <th>Event Title</th>
+                <th>Organizer</th>
+                <th>Category</th>
+                <th>Date</th>
+                <th>Capacity</th>
+                <th>Bookings</th>
+                <th>Price</th>
+                <th>Status</th>
+                <th>Featured</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{range $i, $ev := .Events}}
+              <tr>
+                <td class="text-muted">{{add $i 1}}</td>
+                <td>
+                  <a href="/events/view?id={{$ev.ID}}" class="fw-600 text-dark text-decoration-none">{{truncate $ev.Title 35}}</a>
+                </td>
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="avatar" style="width:24px;height:24px;font-size:.65rem;">{{slice $ev.OrganizerName 0 1}}</div>
+                    {{$ev.OrganizerName}}
+                  </div>
+                </td>
+                <td><span class="badge text-bg-light border">{{$ev.Category}}</span></td>
+                <td><small>{{formatDate $ev.EventDate}}</small></td>
+                <td>{{$ev.Capacity}}</td>
+                <td><span class="fw-600">{{$ev.BookingCount}}</span></td>
+                <td>{{formatPrice $ev.Price}}</td>
+                <td>
+                  <span class="badge bg-{{$ev.Status}}">{{$ev.Status}}</span>
+                </td>
+                <td>
+                  <a href="/admin/events/feature?id={{$ev.ID}}" class="btn btn-sm btn-outline-secondary py-0 border-0" title="Toggle Feature">
+                    {{if $ev.IsFeatured}}<i class="bi bi-star-fill text-warning"></i>{{else}}<i class="bi bi-star text-muted"></i>{{end}}
+                  </a>
+                </td>
+                <td>
+                  <div class="d-flex gap-1">
+                    {{if eq $ev.Status "pending"}}
+                    <a href="/admin/events/approve?id={{$ev.ID}}" class="btn btn-success btn-sm py-0 px-2" title="Approve"><i class="bi bi-check-lg"></i></a>
+                    <button class="btn btn-danger btn-sm py-0 px-2" onclick="openReject({{$ev.ID}},'{{$ev.Title}}')" title="Reject"><i class="bi bi-x-lg"></i></button>
+                    {{end}}
+                    {{if eq $ev.Status "rejected"}}
+                    <a href="/admin/events/approve?id={{$ev.ID}}" class="btn btn-outline-success btn-sm py-0 px-2" title="Re-approve"><i class="bi bi-check-lg"></i></a>
+                    {{end}}
+                    <a href="/events/view?id={{$ev.ID}}" class="btn btn-outline-primary btn-sm py-0 px-2" title="View"><i class="bi bi-eye"></i></a>
+                    <a href="/admin/events/delete?id={{$ev.ID}}" class="btn btn-outline-danger btn-sm py-0 px-2" onclick="return confirm('Delete this event? This cannot be undone.')" title="Delete"><i class="bi bi-trash3"></i></a>
+                  </div>
+                </td>
+              </tr>
+              {{end}}
+            </tbody>
+          </table>
+        </div>
+        {{else}}
+        <div class="text-center py-5 text-muted">
+          <i class="bi bi-calendar-x fs-1 d-block mb-2"></i>No events found
+        </div>
+        {{end}}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reject Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header border-0"><h5 class="modal-title fw-700">Reject Event</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <form method="POST" action="/admin/events/reject">
+        <div class="modal-body">
+          <p class="text-muted">Rejecting: <strong id="rejectTitle"></strong></p>
+          <input type="hidden" name="event_id" id="rejectId">
+          <label class="form-label fw-500">Reason <span class="text-danger">*</span></label>
+          <textarea class="form-control" name="reason" rows="3" placeholder="Explain why..." required></textarea>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger">Reject</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>function openReject(id,title){document.getElementById('rejectId').value=id;document.getElementById('rejectTitle').textContent=title;new bootstrap.Modal(document.getElementById('rejectModal')).show();}</script>
+</body>
+</html>
+{{end}}
