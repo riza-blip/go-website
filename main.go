@@ -175,7 +175,14 @@ var categories = []string{"Conference", "Concert", "Workshop", "Sports", "Exhibi
 
 func main() {
 	var err error
-	db, err = sql.Open("mysql", "root:@tcp(localhost:3306)/event_management?parseTime=true")
+	dbUser := os.Getenv("MYSQLUSER")
+dbPass := os.Getenv("MYSQLPASSWORD")
+dbHost := os.Getenv("MYSQLHOST")
+dbPort := os.Getenv("MYSQLPORT")
+dbName := os.Getenv("MYSQLDATABASE")
+
+dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true", dbUser, dbPass, dbHost, dbPort, dbName)
+db, err = sql.Open("mysql", dsn)
 	if err != nil {
 		log.Fatal("DB connection error:", err)
 	}
